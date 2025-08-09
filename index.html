@@ -56,7 +56,7 @@
                 </div>
                 <div>
                      <label class="text-xs text-gray-400">سرعة التمرير</label>
-                     <input id="scroll-speed-slider" type="range" min="3" max="20" value="10" class="w-full">
+                     <input id="scroll-speed-slider" type="range" min="3" max="30" value="15" class="w-full">
                 </div>
             </div>
             <button id="manage-dhikr-btn" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-lg transition">إدارة الأذكار</button>
@@ -136,13 +136,13 @@
                 isPaused: false,
                 target: 0,
                 current: 0,
-                speed: 10,
+                speed: 15, // Default speed
                 itemHeight: 80,
             }
         };
 
         function loadState() {
-            const savedState = JSON.parse(localStorage.getItem('dhikrAppProStateV10'));
+            const savedState = JSON.parse(localStorage.getItem('dhikrAppProStateV12'));
             if (savedState) {
                 if(savedState.dhikrs) {
                     savedState.dhikrs.forEach(d => { if (d.isActive === undefined) d.isActive = false; });
@@ -157,7 +157,7 @@
         }
 
         function saveState() {
-            localStorage.setItem('dhikrAppProStateV10', JSON.stringify(state));
+            localStorage.setItem('dhikrAppProStateV12', JSON.stringify(state));
         }
 
         function render() {
@@ -270,7 +270,7 @@
             stopScrolling(true);
             const activeDhikrs = getActiveDhikrs();
             const text = activeDhikrs.length > 0 ? activeDhikrs[0].text : 'معاينة السرعة';
-            const animationDuration = (23 - state.scroll.speed) * 1000;
+            const animationDuration = (33 - state.scroll.speed) * 1000;
 
             const scrollEl = document.createElement('div');
             scrollEl.className = 'scrolling-text w-max max-w-xl mx-auto p-3 text-xl md:text-2xl text-center royal-gold-text border-2 royal-gold-border rounded-xl shadow-xl controls-bg';
@@ -294,18 +294,23 @@
             const dhikrToUpdate = getNextDhikrForLoop(activeDhikrs);
             if (!dhikrToUpdate) { stopScrolling(); return; }
 
-            const animationDuration = (23 - state.scroll.speed) * 1000;
+            const animationDuration = (33 - state.scroll.speed) * 1000;
             const scrollEl = document.createElement('div');
             scrollEl.className = 'scrolling-text w-max max-w-xl mx-auto p-3 text-xl md:text-2xl text-center royal-gold-text border-2 royal-gold-border rounded-xl shadow-xl controls-bg';
             scrollEl.textContent = dhikrToUpdate.text;
             scrollEl.style.animationDuration = `${animationDuration}ms`;
             elements.scrollingContainer.appendChild(scrollEl);
-            setTimeout(() => scrollEl.remove(), animationDuration);
+            
+            setTimeout(() => {
+                if (!state.scroll.isPaused) {
+                    state.sessionCount++;
+                    dhikrToUpdate.totalCount++;
+                    state.scroll.current++;
+                    render();
+                }
+            }, animationDuration / 2);
 
-            state.sessionCount++;
-            dhikrToUpdate.totalCount++;
-            state.scroll.current++;
-            render();
+            setTimeout(() => scrollEl.remove(), animationDuration);
         };
 
         function startScrolling() {
@@ -318,7 +323,7 @@
             state.scroll.current = 0;
             state.scroll.target = parseInt(elements.scrollTargetInput.value) || 0;
 
-            const animationDuration = (23 - state.scroll.speed) * 1000;
+            const animationDuration = (33 - state.scroll.speed) * 1000;
             const spawnInterval = animationDuration * (state.scroll.itemHeight / window.innerHeight);
             
             scrollLoop();
