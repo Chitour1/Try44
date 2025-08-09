@@ -69,7 +69,15 @@
             <div class="level h-14 md:h-16"></div><div class="level h-14 md:h-16"></div><div class="level h-14 md:h-16"></div><div class="level h-14 md:h-16"></div><div class="level h-14 md:h-16"></div>
         </div>
         <div id="fixed-mode-container" class="w-full h-full flex items-center justify-center p-4"></div>
-        <div id="scrolling-mode-container" class="w-full h-full cursor-pointer relative"></div>
+        <div id="scrolling-mode-container" class="w-full h-full cursor-pointer relative">
+             <div id="play-pause-overlay" class="hidden absolute inset-0 bg-black/20 flex items-center justify-center z-20">
+                <div class="w-24 h-24 bg-black/50 rounded-full flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- زر الضغط والعدادات -->
@@ -123,6 +131,7 @@
             scrollControls: document.getElementById('scroll-controls'),
             scrollTargetInput: document.getElementById('scroll-target-input'),
             scrollSpeedSlider: document.getElementById('scroll-speed-slider'),
+            playPauseOverlay: document.getElementById('play-pause-overlay'),
         };
 
         let state = {
@@ -142,7 +151,7 @@
         };
 
         function loadState() {
-            const savedState = JSON.parse(localStorage.getItem('dhikrAppProStateV12'));
+            const savedState = JSON.parse(localStorage.getItem('dhikrAppProStateV13'));
             if (savedState) {
                 if(savedState.dhikrs) {
                     savedState.dhikrs.forEach(d => { if (d.isActive === undefined) d.isActive = false; });
@@ -157,7 +166,7 @@
         }
 
         function saveState() {
-            localStorage.setItem('dhikrAppProStateV12', JSON.stringify(state));
+            localStorage.setItem('dhikrAppProStateV13', JSON.stringify(state));
         }
 
         function render() {
@@ -302,7 +311,7 @@
             elements.scrollingContainer.appendChild(scrollEl);
             
             setTimeout(() => {
-                if (!state.scroll.isPaused) {
+                if (!state.scroll.isPaused && state.scroll.intervalId !== null) {
                     state.sessionCount++;
                     dhikrToUpdate.totalCount++;
                     state.scroll.current++;
@@ -320,6 +329,7 @@
 
             state.scroll.isPaused = false;
             elements.scrollingContainer.classList.remove('paused');
+            elements.playPauseOverlay.classList.add('hidden');
             state.scroll.current = 0;
             state.scroll.target = parseInt(elements.scrollTargetInput.value) || 0;
 
@@ -339,12 +349,14 @@
             if(clearContainer) {
                 elements.scrollingContainer.innerHTML = '';
             }
+            elements.playPauseOverlay.classList.add('hidden');
         }
 
         function toggleScrollPause() {
             if (state.displayMode !== 'scrolling') return;
             state.scroll.isPaused = !state.scroll.isPaused;
             elements.scrollingContainer.classList.toggle('paused', state.scroll.isPaused);
+            elements.playPauseOverlay.classList.toggle('hidden', !state.scroll.isPaused);
         }
 
         function getActiveDhikrs() {
@@ -436,7 +448,9 @@
         });
 
         elements.manageDhikrBtn.addEventListener('click', () => {
-            handleSettingsClose();
+            // FIX: Just close the panel and stop scroll, don't start it.
+            elements.settingsPanel.classList.add('hidden');
+            stopScrolling(true);
             elements.dhikrModal.classList.remove('hidden');
         });
         elements.closeModalBtn.addEventListener('click', () => {
@@ -444,6 +458,10 @@
             saveState();
             render();
             syncMainDisplay();
+            // FIX: Restart scrolling only after the dhikr modal is closed.
+            if (state.displayMode === 'scrolling') {
+                startScrolling();
+            }
         });
 
         loadState();
